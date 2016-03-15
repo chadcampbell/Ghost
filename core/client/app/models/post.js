@@ -34,6 +34,7 @@ export default Model.extend(ValidationEngine, {
     publishedBy: belongsTo('user', {async: true}),
     createdAt: attr('moment-date'),
     createdBy: attr(),
+    path: attr('string'),
     tags: hasMany('tag', {
         embedded: 'always',
         async: false

@@ -69,12 +69,27 @@ frontendControllers = {
             permalink = config.theme.permalinks,
             editFormat = permalink.substr(permalink.length - 1) === '/' ? ':edit?' : '/:edit?',
             postLookup,
-            match;
-
-        // Convert saved permalink into a path-match function
+            match,
+            path;
+                            
+        // [CAC] - Determine if URL has path data in addition to the slug. If so, it must be split.
+        var slashCount = postPath.match(/\//g).length;
+        if (slashCount > 2) {               // The number two is used because the legacy approach will have a path like /:slug/, hence 2 slashes.
+            var lastSlash = postPath.substr(0, postPath.lastIndexOf('/')).lastIndexOf('/');
+            path = postPath.substr(0, lastSlash);
+            postPath = postPath.substr(path.length);            
+        }
+        
         permalink = routeMatch(permalink + editFormat);
         match = permalink(postPath);
-
+        if (match) {
+            if (path) {
+                // Remove the leading '/' and append a trailing '/'. 
+                // This is necessary because this is the format as stored in the database.                
+                match.path = path.substr(1) + '/';      
+            }
+        }
+        
         // Check if the path matches the permalink structure.
         //
         // If there are no matches found we then
@@ -93,10 +108,10 @@ frontendControllers = {
         params = match;
 
         // Sanitize params we're going to use to lookup the post.
-        postLookup = _.pick(params, 'slug', 'id');
+        postLookup = _.pick(params, 'slug', 'id', 'path');
         // Add author & tag
         postLookup.include = 'author,tags';
-
+        
         // Query database to find post
         return api.posts.read(postLookup).then(function then(result) {
             var post = result.posts[0],
@@ -142,7 +157,11 @@ frontendControllers = {
             } else {
                 return next();
             }
-        }).catch(handleError(next));
+        }).catch(function(err) {
+            console.log('[cac] - error: ');
+            console.log(err);
+            handleError(next)
+        });
     },
     private: function private(req, res) {
         var defaultPage = path.resolve(config.paths.adminViews, 'private.hbs'),

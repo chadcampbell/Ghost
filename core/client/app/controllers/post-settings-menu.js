@@ -57,7 +57,7 @@ export default Controller.extend(SettingsMenuMixin, {
             .create(deferred);
     }),
 
-    slugValue: boundOneWay('model.slug'),
+    postUrl: boundOneWay('model.slug'),
 
     // Requests slug from title
     generateAndSetSlug(destination) {
@@ -226,6 +226,7 @@ export default Controller.extend(SettingsMenuMixin, {
          */
         updateSlug(newSlug) {
             let slug = this.get('model.slug');
+            let path = null;
 
             newSlug = newSlug || slug;
             newSlug = newSlug && newSlug.trim();
@@ -233,9 +234,22 @@ export default Controller.extend(SettingsMenuMixin, {
             // Ignore unchanged slugs or candidate slugs that are empty
             if (!newSlug || slug === newSlug) {
                 // reset the input to its previous state
-                this.set('slugValue', slug);
-
+                this.postUrl = slug;
                 return;
+            }
+            
+            // Remove the last '/' if its the last character in the URL
+            let lastSlash = newSlug.lastIndexOf('/');
+            if (lastSlash === (newSlug.length-1)) {
+                newSlug = newSlug.substring(0, newSlug.length-1);
+            }            
+
+            // Determine if URL has path data. If so, it must be split.
+            lastSlash = newSlug.lastIndexOf('/');
+            if (lastSlash !== -1) {
+                path = newSlug.substring(0, lastSlash+1); 
+                newSlug = newSlug.substring(path.length);
+                this.set('model.path', path);
             }
 
             this.get('slugGenerator').generateSlug('post', newSlug).then((serverSlug) => {
@@ -259,18 +273,18 @@ export default Controller.extend(SettingsMenuMixin, {
                 // for the incrementor then the existing slug should be used
                 if (isNumber(check) && check > 0) {
                     if (slug === slugTokens.join('-') && serverSlug !== newSlug) {
-                        this.set('slugValue', slug);
-
+                        this.postUrl = slug;
                         return;
                     }
                 }
 
                 this.set('model.slug', serverSlug);
+                this.postUrl = (path) ? (path+serverSlug) : serverSlug;
 
                 if (this.hasObserverFor('model.titleScratch')) {
                     this.removeObserver('model.titleScratch', this, 'titleObserver');
                 }
-
+                
                 // If this is a new post.  Don't save the model.  Defer the save
                 // to the user pressing the save button
                 if (this.get('model.isNew')) {

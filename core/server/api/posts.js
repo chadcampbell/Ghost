@@ -79,7 +79,7 @@ posts = {
      * @return {Promise<Post>} Post
      */
     read: function read(options) {
-        var attrs = ['id', 'slug', 'status', 'uuid'],
+        var attrs = ['id', 'slug', 'status', 'uuid', 'path'],
             tasks;
 
         /**
